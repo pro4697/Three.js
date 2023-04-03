@@ -3,12 +3,11 @@ module.exports = {
     browser: true,
     es2021: true,
   },
-  extends: ['eslint:recommended', 'airbnb', 'plugin:prettier/recommended'],
+  extends: ['eslint:recommended', 'prettier'],
   overrides: [],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  useTabs: false,
-  rules: {},
+  rules: { 'no-use-before-define': 'off', 'no-undef': 'off' },
 };
