@@ -1,30 +1,50 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
+// 구체 텍스쳐: https://www.solarsystemscope.com/textures/
+// 배경 이미지: https://polyhaven.com/
+// hdri 파일 변환: https://matheowis.github.io/HDRI-to-CubeMap/
+
 window.addEventListener('load', () => {
   init();
 });
+
+const canvasSize = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+};
 
 function init() {
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
     antialias: true,
   });
-
-  const container = document.querySelector('#app');
-
-  container.appendChild(renderer.domElement);
-
-  const canvasSize = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-  };
-
-  // canvas 사이즈 지정
+  renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setSize(canvasSize.width, canvasSize.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+  const container = document.querySelector('#app');
+  container.appendChild(renderer.domElement);
+
+  // 구체 텍스쳐 로더
+  const textureLoader = new THREE.TextureLoader();
+
+  // cube형식 배경화면 로더
+  const cubeTextureLoader = new THREE.CubeTextureLoader();
+  const environmentMap = cubeTextureLoader.load([
+    'assets/environments/px.png',
+    'assets/environments/nx.png',
+    'assets/environments/py.png',
+    'assets/environments/nx.png',
+    'assets/environments/pz.png',
+    'assets/environments/nx.png',
+  ]);
+  environmentMap.encoding = THREE.sRGBEncoding;
+
   const scene = new THREE.Scene();
+  scene.background = environmentMap;
+  scene.environment = environmentMap;
+
   const camera = new THREE.PerspectiveCamera(
     75,
     canvasSize.width / canvasSize.height,
@@ -40,10 +60,23 @@ function init() {
   controls.enableDamping = true;
   controls.dampingFactor = 0.1;
 
+  const addLight = () => {
+    const light = new THREE.DirectionalLight(0xffffff);
+    light.position.set(2.65, 2.13, 1.02);
+
+    scene.add(light);
+  };
+
   // 테스트 object
-  const createObject = () => {
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const geometry = new THREE.PlaneGeometry(1, 1);
+  const createEarth1 = () => {
+    // StandardMaterial은 조명이 필요함
+    const material = new THREE.MeshStandardMaterial({
+      map: textureLoader.load('assets/earth-night-map.jpg'),
+      roughness: 0.7, // 거칠질감
+      metalness: 0, // 금속질감
+    });
+
+    const geometry = new THREE.SphereGeometry(1.3, 30, 30);
     const mesh = new THREE.Mesh(geometry, material);
 
     scene.add(mesh);
@@ -73,7 +106,8 @@ function init() {
   };
 
   const initialize = () => {
-    createObject();
+    addLight();
+    createEarth1();
     addEvent();
     resize();
     draw();
