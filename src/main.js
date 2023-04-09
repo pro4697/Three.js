@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { convertLatLngToPos, getGradientCanvas } from './utils';
 
 // 구체 텍스쳐: https://www.solarsystemscope.com/textures/
 // 배경 이미지: https://polyhaven.com/
@@ -20,11 +21,6 @@ function init() {
     antialias: true,
   });
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.setSize(canvasSize.width, canvasSize.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-  const container = document.querySelector('#app');
-  container.appendChild(renderer.domElement);
 
   // 구체 텍스쳐 로더
   const textureLoader = new THREE.TextureLoader();
@@ -35,11 +31,14 @@ function init() {
     'assets/environments/px.png',
     'assets/environments/nx.png',
     'assets/environments/py.png',
-    'assets/environments/nx.png',
+    'assets/environments/ny.png',
     'assets/environments/pz.png',
-    'assets/environments/nx.png',
+    'assets/environments/nz.png',
   ]);
   environmentMap.encoding = THREE.sRGBEncoding;
+
+  const container = document.querySelector('#app');
+  container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = environmentMap;
@@ -67,6 +66,44 @@ function init() {
     scene.add(light);
   };
 
+  const createPoint1 = () => {
+    const point = {
+      lat: 37.56668 * (Math.PI / 180),
+      lng: 126.97841 * (Math.PI / 180),
+    };
+
+    const position = convertLatLngToPos(point, 1.3);
+
+    const mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.02, 0.002, 20, 20),
+      new THREE.MeshBasicMaterial({ color: 0x263d64 }),
+    );
+
+    mesh.position.set(position.x, position.y, position.z);
+    mesh.rotation.set(0.9, 2.46, 1);
+
+    return mesh;
+  };
+
+  const createPoint2 = () => {
+    const point = {
+      lat: 5.55363 * (Math.PI / 100),
+      lng: -0.0196481 * (Math.PI / 100),
+    };
+
+    const position = convertLatLngToPos(point, 1.3);
+
+    const mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.02, 0.002, 20, 20),
+      new THREE.MeshBasicMaterial({ color: 0x263d64 }),
+    );
+
+    mesh.position.set(position.x, position.y, position.z);
+    mesh.rotation.set(-0.15, 0, 0);
+
+    return mesh;
+  };
+
   const createStar = (count = 500) => {
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -82,7 +119,7 @@ function init() {
     );
 
     const particleMaterial = new THREE.PointsMaterial({
-      size: 0.002,
+      size: 0.01,
       transparent: true,
       depthWrite: false, // 텍스쳐가 겹쳐도 투과되도록
       map: textureLoader.load('assets/particle.png'),
@@ -95,28 +132,61 @@ function init() {
     return star;
   };
 
-  // 테스트 object
   const createEarth = () => {
     // StandardMaterial은 조명이 필요함
     const material = new THREE.MeshStandardMaterial({
       map: textureLoader.load('assets/earth-night-map.jpg'),
+      opacity: 0.9,
       roughness: 0.7, // 거칠질감
       metalness: 0, // 금속질감
+      transparent: true,
     });
 
     const geometry = new THREE.SphereGeometry(1.3, 30, 30);
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.y = -Math.PI / 2;
 
     return mesh;
   };
 
+  const createCurve = (pos1, pos2) => {
+    const points = [];
+    for (let i = 0; i <= 100; i++) {
+      // pos1, pos2 두 좌표사이의 i/100 위치의 벡터를 생성
+      const pos = new THREE.Vector3().lerpVectors(pos1, pos2, i / 100);
+      pos.normalize(); // 1미만의 값으로 정규화
+
+      const wave = Math.sin((Math.PI * i) / 100);
+
+      pos.multiplyScalar(1.3 + 0.4 * wave); // n배
+
+      points.push(pos);
+    }
+    const curve = new THREE.CatmullRomCurve3(points);
+    const geometry = new THREE.TubeGeometry(curve, 20, 0.003);
+
+    const gradientCanvas = getGradientCanvas('#757F94', '#263D74');
+    const texture = new THREE.CanvasTexture(gradientCanvas);
+
+    const material = new THREE.MeshBasicMaterial({ map: texture });
+    const mesh = new THREE.Mesh(geometry, material);
+    return mesh;
+  };
+
   const create = () => {
+    const earthGroup = new THREE.Group();
+
     const earth = createEarth();
     const star = createStar();
+    const point1 = createPoint1();
+    const point2 = createPoint2();
+    const curve = createCurve(point1.position, point2.position);
 
-    scene.add(earth, star);
+    earthGroup.add(earth, point1, point2, curve);
 
-    return { earth, star };
+    scene.add(earthGroup, star);
+
+    return { earthGroup, star };
   };
 
   const resize = () => {
@@ -135,11 +205,11 @@ function init() {
   };
 
   const draw = (obj) => {
-    const { earth, star } = obj;
+    const { earthGroup, star } = obj;
 
     // 회전
-    earth.rotation.x += 0.0005;
-    earth.rotation.y += 0.0005;
+    earthGroup.rotation.x += 0.0005;
+    earthGroup.rotation.y += 0.0005;
 
     star.rotation.x += 0.001;
     star.rotation.y += 0.001;
