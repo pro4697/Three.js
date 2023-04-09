@@ -67,8 +67,36 @@ function init() {
     scene.add(light);
   };
 
+  const createStar = (count = 500) => {
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i] = (Math.random() - 0.5) * 5; // -3 ~ 3
+      positions[i + 1] = (Math.random() - 0.5) * 5;
+      positions[i + 2] = (Math.random() - 0.5) * 5;
+    }
+
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(positions, 3),
+    );
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.002,
+      transparent: true,
+      depthWrite: false, // 텍스쳐가 겹쳐도 투과되도록
+      map: textureLoader.load('assets/particle.png'),
+      alphaMap: textureLoader.load('assets/particle.png'), // png 검은배경 제거
+      color: 0xbcc6c6,
+    });
+
+    const star = new THREE.Points(particleGeometry, particleMaterial);
+
+    return star;
+  };
+
   // 테스트 object
-  const createEarth1 = () => {
+  const createEarth = () => {
     // StandardMaterial은 조명이 필요함
     const material = new THREE.MeshStandardMaterial({
       map: textureLoader.load('assets/earth-night-map.jpg'),
@@ -79,7 +107,16 @@ function init() {
     const geometry = new THREE.SphereGeometry(1.3, 30, 30);
     const mesh = new THREE.Mesh(geometry, material);
 
-    scene.add(mesh);
+    return mesh;
+  };
+
+  const create = () => {
+    const earth = createEarth();
+    const star = createStar();
+
+    scene.add(earth, star);
+
+    return { earth, star };
   };
 
   const resize = () => {
@@ -97,20 +134,29 @@ function init() {
     window.addEventListener('resize', resize);
   };
 
-  const draw = () => {
+  const draw = (obj) => {
+    const { earth, star } = obj;
+
+    // 회전
+    earth.rotation.x += 0.0005;
+    earth.rotation.y += 0.0005;
+
+    star.rotation.x += 0.001;
+    star.rotation.y += 0.001;
+
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(() => {
-      draw();
+      draw(obj);
     });
   };
 
   const initialize = () => {
     addLight();
-    createEarth1();
+    const obj = create();
     addEvent();
     resize();
-    draw();
+    draw(obj);
   };
 
   initialize();
