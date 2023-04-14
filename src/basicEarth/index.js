@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { convertLatLngToPos, getGradientCanvas } from './utils';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
-import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass';
+// import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass';
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
@@ -12,20 +12,18 @@ import dat from 'dat.gui';
 import vertexShader from './shaders/vertex.glsl';
 import fragmentShader from './shaders/fragment.glsl';
 
+import './style.css';
+
 // 구체 텍스쳐: https://www.solarsystemscope.com/textures/
 // 배경 이미지: https://polyhaven.com/
 // hdri 파일 변환: https://matheowis.github.io/HDRI-to-CubeMap/
-
-window.addEventListener('load', () => {
-  init();
-});
 
 const canvasSize = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
 
-function init() {
+export default function init() {
   const clock = new THREE.Clock();
 
   const renderer = new THREE.WebGLRenderer({
@@ -42,12 +40,12 @@ function init() {
   const textureLoader = new THREE.TextureLoader(); // 구체 텍스쳐 로더
   const cubeTextureLoader = new THREE.CubeTextureLoader(); // cube형식 배경화면 로더
   const environmentMap = cubeTextureLoader.load([
-    'assets/environments/px.png',
-    'assets/environments/nx.png',
-    'assets/environments/py.png',
-    'assets/environments/ny.png',
-    'assets/environments/pz.png',
-    'assets/environments/nz.png',
+    'assets/basicEarth/environments/px.png',
+    'assets/basicEarth/environments/nx.png',
+    'assets/basicEarth/environments/py.png',
+    'assets/basicEarth/environments/ny.png',
+    'assets/basicEarth/environments/pz.png',
+    'assets/basicEarth/environments/nz.png',
   ]);
   environmentMap.encoding = THREE.sRGBEncoding;
 
@@ -80,7 +78,7 @@ function init() {
     scene.add(light);
   };
 
-  const addPostEffects = (obj) => {
+  const addPostEffects = (/*obj*/) => {
     // const { earthGroup } = obj;
 
     const renderPass = new RenderPass(scene, camera);
@@ -180,8 +178,8 @@ function init() {
       size: 0.01,
       transparent: true,
       depthWrite: false, // 텍스쳐가 겹쳐도 투과되도록
-      map: textureLoader.load('assets/particle.png'),
-      alphaMap: textureLoader.load('assets/particle.png'), // png 검은배경 제거
+      map: textureLoader.load('assets/basicEarth/particle.png'),
+      alphaMap: textureLoader.load('assets/basicEarth/particle.png'), // png 검은배경 제거
       color: 0xbcc6c6,
     });
 
@@ -193,7 +191,7 @@ function init() {
   const createEarth = () => {
     // StandardMaterial은 조명이 필요함
     const material = new THREE.MeshStandardMaterial({
-      map: textureLoader.load('assets/earth-night-map.jpg'),
+      map: textureLoader.load('assets/basicEarth/earth-night-map.jpg'),
       opacity: 0.9,
       roughness: 0.7, // 거칠질감
       metalness: 0, // 금속질감
