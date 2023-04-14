@@ -1,8 +1,6 @@
-/** @see {import('vite').userConfig} */
+import vitePluginGLSL from 'vite-plugin-glsl';
+
 export default {
-  build: {
-    ourDir: '../dist',
-    emptyOutDir: true,
-  },
-  server: { port: 3000 },
+  plugins: [vitePluginGLSL()],
+  // server: { port: 3000 },
 };
