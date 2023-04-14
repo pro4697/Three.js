@@ -49,7 +49,7 @@ export default function init() {
   ]);
   environmentMap.encoding = THREE.sRGBEncoding;
 
-  const container = document.querySelector('#app');
+  const container = document.querySelector('#container');
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
