@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { convertLatLngToPos, getGradientCanvas } from './utils';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
+import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass';
 
 // 구체 텍스쳐: https://www.solarsystemscope.com/textures/
 // 배경 이미지: https://polyhaven.com/
@@ -18,15 +25,17 @@ const canvasSize = {
 function init() {
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
-    antialias: true,
   });
   renderer.outputEncoding = THREE.sRGBEncoding;
+  const renderTarget = new THREE.WebGLRenderTarget(
+    canvasSize.width,
+    canvasSize.height,
+    { samples: 2 },
+  );
 
-  // 구체 텍스쳐 로더
-  const textureLoader = new THREE.TextureLoader();
-
-  // cube형식 배경화면 로더
-  const cubeTextureLoader = new THREE.CubeTextureLoader();
+  const effectComposer = new EffectComposer(renderer, renderTarget);
+  const textureLoader = new THREE.TextureLoader(); // 구체 텍스쳐 로더
+  const cubeTextureLoader = new THREE.CubeTextureLoader(); // cube형식 배경화면 로더
   const environmentMap = cubeTextureLoader.load([
     'assets/environments/px.png',
     'assets/environments/nx.png',
@@ -52,11 +61,8 @@ function init() {
   );
   camera.position.set(0, 0, 3);
 
-  // 마우스 드래그 컨트롤
-  const controls = new OrbitControls(camera, renderer.domElement);
-
-  // undrag시 부드럽게 멈추기 (damping)
-  controls.enableDamping = true;
+  const controls = new OrbitControls(camera, renderer.domElement); // 마우스 드래그 컨트롤
+  controls.enableDamping = true; // undrag시 부드럽게 멈추기 (damping)
   controls.dampingFactor = 0.1;
 
   const addLight = () => {
@@ -64,6 +70,26 @@ function init() {
     light.position.set(2.65, 2.13, 1.02);
 
     scene.add(light);
+  };
+
+  const addPostEffects = (obj) => {
+    const { earthGroup } = obj;
+
+    const renderPass = new RenderPass(scene, camera);
+    effectComposer.addPass(renderPass);
+
+    const filmPass = new FilmPass(1, 1, 4096, false);
+    // effectComposer.addPass(filmPass);
+
+    const shaderPass = new ShaderPass(GammaCorrectionShader);
+
+    const unrealBloomPass = new UnrealBloomPass(
+      new THREE.Vector2(canvasSize.width, canvasSize.height),
+    );
+    effectComposer.addPass(shaderPass);
+
+    const smaaPass = new SMAAPass();
+    effectComposer.addPass(smaaPass);
   };
 
   const createPoint1 = () => {
@@ -198,6 +224,7 @@ function init() {
 
     renderer.setSize(canvasSize.width, canvasSize.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    effectComposer.setSize(canvasSize.width, canvasSize.height);
   };
 
   const addEvent = () => {
@@ -215,15 +242,18 @@ function init() {
     star.rotation.y += 0.001;
 
     controls.update();
-    renderer.render(scene, camera);
+    effectComposer.render();
+    // renderer.render(scene, camera);
     requestAnimationFrame(() => {
       draw(obj);
     });
   };
 
   const initialize = () => {
-    addLight();
     const obj = create();
+
+    addLight();
+    addPostEffects(obj);
     addEvent();
     resize();
     draw(obj);
