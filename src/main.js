@@ -8,6 +8,9 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass';
+import dat from 'dat.gui';
+import vertexShader from './shaders/vertex.glsl';
+import fragmentShader from './shaders/fragment.glsl';
 
 // 구체 텍스쳐: https://www.solarsystemscope.com/textures/
 // 배경 이미지: https://polyhaven.com/
@@ -23,6 +26,8 @@ const canvasSize = {
 };
 
 function init() {
+  const clock = new THREE.Clock();
+
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
   });
@@ -54,7 +59,7 @@ function init() {
   scene.environment = environmentMap;
 
   const camera = new THREE.PerspectiveCamera(
-    75,
+    80,
     canvasSize.width / canvasSize.height,
     0.1,
     100,
@@ -65,6 +70,9 @@ function init() {
   controls.enableDamping = true; // undrag시 부드럽게 멈추기 (damping)
   controls.dampingFactor = 0.1;
 
+  const gui = new dat.GUI();
+  gui.hide();
+
   const addLight = () => {
     const light = new THREE.DirectionalLight(0xffffff);
     light.position.set(2.65, 2.13, 1.02);
@@ -73,19 +81,43 @@ function init() {
   };
 
   const addPostEffects = (obj) => {
-    const { earthGroup } = obj;
+    // const { earthGroup } = obj;
 
     const renderPass = new RenderPass(scene, camera);
     effectComposer.addPass(renderPass);
 
-    const filmPass = new FilmPass(1, 1, 4096, false);
+    // const filmPass = new FilmPass(1, 1, 4000, false);
     // effectComposer.addPass(filmPass);
 
     const shaderPass = new ShaderPass(GammaCorrectionShader);
+    // vertexShader: 영역, fragment: 픽셀별
+    const customShaderPass = new ShaderPass({
+      uniforms: {
+        uBrightness: { value: 0.3 },
+        uPosition: { value: new THREE.Vector2(0, 0) },
+        uColor: { value: new THREE.Vector3(0, 0, 0.15) },
+        uAlpha: { value: 0.5 },
+        tDiffuse: { value: null },
+      },
+      vertexShader,
+      fragmentShader,
+    });
+
+    // gui.add(customShaderPass.uniforms.uPosition.value, 'x', -1, 1, 0.01);
+    // gui.add(customShaderPass.uniforms.uPosition.value, 'y', -1, 1, 0.01);
+    // gui
+    //   .add(customShaderPass.uniforms.uBrightness, 'value', 0, 1, 0.01)
+    //   .name('brightness');
+
+    effectComposer.addPass(customShaderPass);
 
     const unrealBloomPass = new UnrealBloomPass(
       new THREE.Vector2(canvasSize.width, canvasSize.height),
     );
+    unrealBloomPass.strength = 0.4;
+    unrealBloomPass.threshold = 0.7;
+    unrealBloomPass.radius = 0.7;
+    effectComposer.addPass(unrealBloomPass);
     effectComposer.addPass(shaderPass);
 
     const smaaPass = new SMAAPass();
@@ -102,7 +134,7 @@ function init() {
 
     const mesh = new THREE.Mesh(
       new THREE.TorusGeometry(0.02, 0.002, 20, 20),
-      new THREE.MeshBasicMaterial({ color: 0x263d64 }),
+      new THREE.MeshBasicMaterial({ color: 0x263d64, transparent: true }),
     );
 
     mesh.position.set(position.x, position.y, position.z);
@@ -121,7 +153,7 @@ function init() {
 
     const mesh = new THREE.Mesh(
       new THREE.TorusGeometry(0.02, 0.002, 20, 20),
-      new THREE.MeshBasicMaterial({ color: 0x263d64 }),
+      new THREE.MeshBasicMaterial({ color: 0x263d64, transparent: true }),
     );
 
     mesh.position.set(position.x, position.y, position.z);
@@ -194,7 +226,10 @@ function init() {
     const gradientCanvas = getGradientCanvas('#757F94', '#263D74');
     const texture = new THREE.CanvasTexture(gradientCanvas);
 
-    const material = new THREE.MeshBasicMaterial({ map: texture });
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+    });
     const mesh = new THREE.Mesh(geometry, material);
     return mesh;
   };
@@ -212,7 +247,7 @@ function init() {
 
     scene.add(earthGroup, star);
 
-    return { earthGroup, star };
+    return { earthGroup, point1, point2, curve, star };
   };
 
   const resize = () => {
@@ -232,7 +267,7 @@ function init() {
   };
 
   const draw = (obj) => {
-    const { earthGroup, star } = obj;
+    const { earthGroup, point1, point2, curve, star } = obj;
 
     // 회전
     earthGroup.rotation.x += 0.0005;
@@ -243,6 +278,23 @@ function init() {
 
     controls.update();
     effectComposer.render();
+
+    const timeElampsed = clock.getElapsedTime();
+
+    let drawRangeCount = curve.geometry.drawRange.count;
+    const progress = timeElampsed / 2.5;
+    const speed = 3;
+
+    drawRangeCount = progress * speed * 960;
+
+    curve.geometry.setDrawRange(0, drawRangeCount);
+
+    if (timeElampsed > 4) {
+      point1.material.opacity = 5 - timeElampsed;
+      point2.material.opacity = 5 - timeElampsed;
+      curve.material.opacity = 5 - timeElampsed;
+    }
+
     // renderer.render(scene, camera);
     requestAnimationFrame(() => {
       draw(obj);
