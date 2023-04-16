@@ -275,7 +275,6 @@ export default function init() {
     star.rotation.y += 0.001;
 
     controls.update();
-    effectComposer.render();
 
     const timeElampsed = clock.getElapsedTime();
 
@@ -293,7 +292,8 @@ export default function init() {
       curve.material.opacity = 5 - timeElampsed;
     }
 
-    // renderer.render(scene, camera);
+    // effectComposer.render();
+    renderer.render(scene, camera);
     requestAnimationFrame(() => {
       draw(obj);
     });
