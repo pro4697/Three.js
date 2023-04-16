@@ -9,5 +9,7 @@ void main() {
   vec3 greenColor = vec3(0.0, 1.0, 0.0);
   col = greenColor;
 
-  gl_FragColor = vec4(col, alpha);
+  vec3 finalCol = map.r * greenColor * 2.0;
+
+  gl_FragColor = vec4(finalCol, alpha * finalCol.g);
 }
