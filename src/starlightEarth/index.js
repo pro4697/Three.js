@@ -4,6 +4,8 @@ import vertexShader from './shaders/earth/vertex.glsl?raw';
 import fragmentShader from './shaders/earth/fragment.glsl?raw';
 import pointsVertexShader from './shaders/earthPoints/vertex.glsl?raw';
 import pointsFragmentShader from './shaders/earthPoints/fragment.glsl?raw';
+import glowVertexShader from './shaders/earthGlow/vertex.glsl?raw';
+import glowFragmentShader from './shaders/earthGlow/fragment.glsl?raw';
 
 import './style.css';
 
@@ -25,7 +27,7 @@ export default function () {
   const textureLoader = new THREE.TextureLoader();
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
-    75,
+    105, // 75
     canvasSize.width / canvasSize.height,
     0.1,
     100,
@@ -82,11 +84,36 @@ export default function () {
     return mesh;
   };
 
+  const createEarthGlow = () => {
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uZoom: {
+          value: 1,
+        },
+      },
+      vertexShader: glowVertexShader,
+      fragmentShader: glowFragmentShader,
+      wireframe: false,
+      side: THREE.BackSide,
+      transparent: true,
+    });
+
+    const geometry = new THREE.SphereGeometry(1, 40, 40);
+    const mesh = new THREE.Mesh(geometry, material);
+
+    return mesh;
+  };
+
   const create = () => {
     const earth = createEarth();
     const earthPoints = createEarthPoints();
+    const earthGlow = createEarthGlow();
 
-    scene.add(earth, earthPoints);
+    scene.add(earth, earthPoints, earthGlow);
+
+    return {
+      earthGlow,
+    };
   };
 
   const resize = () => {
@@ -104,19 +131,26 @@ export default function () {
     window.addEventListener('resize', resize);
   };
 
-  const draw = () => {
+  const draw = (obj) => {
+    const { earthGlow } = obj;
+
     controls.update();
     renderer.render(scene, camera);
+
+    earthGlow.material.uniforms.uZoom.value = controls.target.distanceTo(
+      controls.object.position,
+    );
+
     requestAnimationFrame(() => {
-      draw();
+      draw(obj);
     });
   };
 
   const initialize = () => {
-    create();
+    const obj = create();
     addEvent();
     resize();
-    draw();
+    draw(obj);
   };
 
   initialize();
